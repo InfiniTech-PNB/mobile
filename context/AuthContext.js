@@ -11,8 +11,15 @@ export const AuthProvider = ({ children }) => {
     const getUserFromToken = (token) => {
         try {
             const decoded = jwtDecode(token);
+            const currentTime = Date.now() / 1000;
+            
+            if (decoded.exp < currentTime) {
+                console.warn("Token has expired.");
+                return null;
+            }
+            
             return {
-                token,
+                token, // Keep the token string in the object
                 id: decoded.id,
                 role: decoded.role,
                 name: decoded.name,
@@ -25,20 +32,41 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         const loadToken = async () => {
-            const token = await SecureStore.getItemAsync('token');
-            if (token) {
-                const userData = getUserFromToken(token);
-                if (userData) setUser(userData);
+            try {
+                const token = await SecureStore.getItemAsync('token');
+                console.log("Token found in SecureStore:", token ? "YES" : "NO");
+                
+                if (token) {
+                    const userData = getUserFromToken(token);
+                    if (userData) {
+                        setUser(userData);
+                    } else {
+                        await SecureStore.deleteItemAsync('token');
+                    }
+                }
+            } catch (e) {
+                console.error("SecureStore load error:", e);
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         };
         loadToken();
     }, []);
 
     const login = async (token) => {
-        await SecureStore.setItemAsync('token', token);
-        const userData = getUserFromToken(token);
-        setUser(userData);
+        try {
+            // 1. SAVE to storage
+            await SecureStore.setItemAsync('token', token);
+
+            // 2. Update STATE immediately
+            const userData = getUserFromToken(token);
+            setUser(userData);
+
+            console.log("✅ AuthState: Token saved and user set");
+            // NOTE: We do NOT navigate here. We let the _layout.jsx handle it.
+        } catch (err) {
+            console.error("Failed to save token", err);
+        }
     };
 
     const logout = async () => {

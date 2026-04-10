@@ -8,6 +8,7 @@ import { Mail, Key, ShieldEllipsis, LogIn, ArrowLeft, RefreshCcw, ShieldCheck, Z
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import API from '../../services/api';
+import * as SecureStore from 'expo-secure-store';
 
 export default function Login() {
     const [step, setStep] = useState(1);
@@ -58,7 +59,7 @@ export default function Login() {
             setError(null);
             const response = await API.post("/auth/verify-otp", { email, otp });
             await login(response.data.token);
-            router.replace('/(tabs)');
+            console.log("OTP Verified. Waiting for redirect...");
         } catch (err) {
             setError(err.response?.data?.message || "Invalid OTP. Please try again.");
         } finally {
