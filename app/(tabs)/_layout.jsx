@@ -69,6 +69,30 @@ export default function TabLayout() {
           headerTitle: "CBOM" 
         }} 
       />
+      <Tabs.Screen 
+        name="executive" 
+        options={{ 
+          href: null, // This is the magic line that hides it
+          headerShown: true, 
+          headerTitle: "Executive Reporting" 
+        }} 
+      />
+      <Tabs.Screen 
+        name="scheduled" 
+        options={{ 
+          href: null, // This is the magic line that hides it
+          headerShown: true, 
+          headerTitle: "Scheduled Reporting" 
+        }} 
+      />
+      <Tabs.Screen 
+        name="ondemand" 
+        options={{ 
+          href: null, // This is the magic line that hides it
+          headerShown: true, 
+          headerTitle: "OnDemand Reporting" 
+        }} 
+      />
     </Tabs>
   );
 }

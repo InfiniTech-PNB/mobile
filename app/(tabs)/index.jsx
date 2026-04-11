@@ -38,31 +38,60 @@ const ChartLegend = ({ data, colors }) => (
 const MultiSegmentPie = ({ data, total, colors, size = 140, strokeWidth = 16, centerLabel, centerSubLabel }) => {
     const radius = (size - strokeWidth) / 2;
     const circumference = radius * 2 * Math.PI;
-    let currentOffset = 0;
+    let accumulatedValue = 0;
+
+    // Use a default total of 1 if total is 0 to avoid Division by Zero
+    const safeTotal = total || 1;
 
     return (
         <View className="items-center justify-center" style={{ width: size, height: size }}>
-            <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
-                <Circle cx={size / 2} cy={size / 2} r={radius} stroke="#e2e8f0" strokeWidth={strokeWidth} fill="none" opacity={0.1} />
+            <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+                {/* Background Track (Ghost ring) */}
+                <Circle 
+                    cx={size / 2} 
+                    cy={size / 2} 
+                    r={radius} 
+                    stroke="#e2e8f0" 
+                    strokeWidth={strokeWidth} 
+                    fill="none" 
+                    opacity={0.2} 
+                />
+                
                 {data?.map((item, index) => {
                     const val = parseFloat(item.value) || 0;
                     if (val === 0) return null;
-                    const percentage = (val / total) * 100;
-                    const strokeDashoffset = circumference - (percentage / 100) * circumference;
-                    const rotationOffset = (currentOffset / total) * 360;
-                    currentOffset += val;
+
+                    const percentage = (val / safeTotal);
+                    const strokeDashoffset = circumference * (1 - percentage);
+                    
+                    // Calculate rotation: start from top (-90deg) and add the sum of previous segments
+                    const angle = (accumulatedValue / safeTotal) * 360 - 90;
+                    
+                    // Update accumulator for the next segment
+                    accumulatedValue += val;
+
                     return (
-                        <Circle key={index} cx={size / 2} cy={size / 2} r={radius}
-                            stroke={item.color || colors[index % colors.length]} strokeWidth={strokeWidth} fill="none"
-                            strokeDasharray={`${circumference} ${circumference}`} strokeDashoffset={strokeDashoffset}
-                            strokeLinecap="butt" style={{ transform: [{ rotate: `${rotationOffset}deg` }], transformOrigin: 'center' }}
+                        <Circle 
+                            key={index} 
+                            cx={size / 2} 
+                            cy={size / 2} 
+                            r={radius}
+                            stroke={item.color || colors[index % colors.length]} 
+                            strokeWidth={strokeWidth} 
+                            fill="none"
+                            strokeDasharray={circumference} 
+                            strokeDashoffset={strokeDashoffset}
+                            strokeLinecap="round" // Rounded edges look more premium
+                            transform={`rotate(${angle} ${size / 2} ${size / 2})`}
                         />
                     );
                 })}
             </Svg>
+            
+            {/* Center Labels */}
             <View className="absolute items-center justify-center">
-                <Text className="text-xl font-black dark:text-white">{centerLabel}</Text>
-                <Text className="text-[7px] font-bold text-gray-400 uppercase tracking-widest">{centerSubLabel}</Text>
+                <Text className="text-2xl font-black dark:text-white leading-tight">{centerLabel}</Text>
+                <Text className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{centerSubLabel}</Text>
             </View>
         </View>
     );
@@ -227,7 +256,7 @@ const HomeTab = () => {
                         <View className="items-center py-4">
                             <MultiSegmentPie
                                 data={stats.pqcAdoption}
-                                total={stats.scannedAssetsCount || 1}
+                                total={stats.pqcAdoption[0].value + stats.pqcAdoption[1].value + stats.pqcAdoption[2].value || 1}
                                 colors={COLORS}
                                 centerLabel={stats.pqcReadyAssets || 0}
                                 centerSubLabel="Safe Nodes"
