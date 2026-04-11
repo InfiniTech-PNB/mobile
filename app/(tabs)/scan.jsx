@@ -1,21 +1,21 @@
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { 
-    View, Text, TextInput, ScrollView, TouchableOpacity, 
-    ActivityIndicator, KeyboardAvoidingView, 
-    Platform, TouchableWithoutFeedback, Keyboard 
+import React, { useState, useMemo, useCallback, useRef, useEffect, memo } from 'react';
+import {
+    View, Text, TextInput, TouchableOpacity,
+    ActivityIndicator, KeyboardAvoidingView,
+    Platform, TouchableWithoutFeedback, Keyboard, FlatList, ScrollView
 } from 'react-native';
-import { 
-    Globe, ShieldAlert, Zap, Loader2, CheckCircle2, 
-    Settings2, Shield, Server, Activity, Cpu, 
-    Lock, Search, ChevronDown, ChevronUp, Hash, Info
+import {
+    Globe, CheckCircle2, Settings2, Server, Activity, Cpu,
+    Lock, Search, ChevronDown, ChevronUp, Hash, Zap, Shield, Loader2, Loader
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { useColorScheme } from 'nativewind';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import API from "../../services/api";
+import { useColorScheme } from 'react-native';
 
-// --- SUB-COMPONENTS ---
+// --- 1. STABLE SUB-COMPONENTS (Defined outside to prevent re-render crashes) ---
 
-const CIASlider = ({ label, value, onChange, disabled, icon }) => (
+const CIASlider = memo(({ label, value, onChange, disabled, icon }) => (
     <View className="mb-5 w-[48%]">
         <View className="flex-row justify-between mb-1.5 px-1">
             <View className="flex-row items-center">
@@ -26,8 +26,8 @@ const CIASlider = ({ label, value, onChange, disabled, icon }) => (
         </View>
         <View className="flex-row items-center gap-1">
             {[...Array(11).keys()].map(i => (
-                <TouchableOpacity 
-                    key={i} 
+                <TouchableOpacity
+                    key={i}
                     onPress={() => !disabled && onChange(i)}
                     activeOpacity={0.7}
                     className={`h-1.5 flex-1 rounded-full ${i <= value ? (disabled ? 'bg-slate-300' : 'bg-orange-500') : 'bg-gray-200 dark:bg-slate-800'}`}
@@ -35,33 +35,27 @@ const CIASlider = ({ label, value, onChange, disabled, icon }) => (
             ))}
         </View>
     </View>
-);
+));
 
-const AssetCard = ({ asset, isSelected, isExpanded, onSelect, onExpand, loadingServices, services, context, onContextUpdate, isDark }) => {
-    
-    // Define the 6 Configuration Fields
+const AssetCard = memo(({ asset, isSelected, isExpanded, onSelect, onExpand, loadingServices, services, context, onContextUpdate, isDark }) => {
     const configFields = [
-        { key: 'confidentialityWeight', label: 'Confidentiality', icon: <Lock size={10} color="#94a3b8"/> },
-        { key: 'integrityWeight', label: 'Integrity', icon: <Activity size={10} color="#94a3b8"/> },
-        { key: 'availabilityWeight', label: 'Availability', icon: <Zap size={10} color="#94a3b8"/> },
-        { key: 'assetCriticality', label: 'Criticality', icon: <Shield size={10} color="#94a3b8"/> },
-        { key: 'slaRequirement', label: 'SLA Priority', icon: <Cpu size={10} color="#94a3b8"/> },
-        { key: 'dependentServices', label: 'Dependencies', icon: <Hash size={10} color="#94a3b8"/> },
+        { key: 'confidentialityWeight', label: 'Confidentiality', icon: <Lock size={10} color="#94a3b8" /> },
+        { key: 'integrityWeight', label: 'Integrity', icon: <Activity size={10} color="#94a3b8" /> },
+        { key: 'availabilityWeight', label: 'Availability', icon: <Zap size={10} color="#94a3b8" /> },
+        { key: 'assetCriticality', label: 'Criticality', icon: <Shield size={10} color="#94a3b8" /> },
+        { key: 'slaRequirement', label: 'SLA Priority', icon: <Cpu size={10} color="#94a3b8" /> },
+        { key: 'dependentServices', label: 'Dependencies', icon: <Hash size={10} color="#94a3b8" /> },
     ];
 
     return (
-        <View 
-            className="bg-white dark:bg-[#111827] border-2 rounded-[2.5rem] p-5 mb-6"
-            style={{ 
-                borderColor: isSelected ? '#f97316' : (isDark ? '#1e293b' : '#f1f5f9'),
-                elevation: isSelected ? 8 : 0,
-            }}
+        <View
+            className="bg-white dark:bg-[#111827] border-2 rounded-[2.5rem] p-5 mb-6 mx-6"
+            style={{ borderColor: isSelected ? '#f97316' : (isDark ? '#1e293b' : '#f1f5f9') }}
         >
-            {/* Asset Info Header */}
             <View className="flex-row items-center justify-between mb-4">
                 <View className="flex-row items-center flex-1">
-                    <TouchableOpacity 
-                        onPress={() => onSelect(asset._id)} 
+                    <TouchableOpacity
+                        onPress={() => onSelect(asset._id)}
                         className={`w-8 h-8 rounded-xl border-2 items-center justify-center ${isSelected ? 'bg-orange-500 border-orange-500' : 'border-gray-200 dark:border-slate-700'}`}
                     >
                         {isSelected && <CheckCircle2 size={16} color="white" />}
@@ -76,13 +70,9 @@ const AssetCard = ({ asset, isSelected, isExpanded, onSelect, onExpand, loadingS
                 </View>
             </View>
 
-            {/* Inspect Services Toggle */}
             <TouchableOpacity onPress={() => onExpand(asset._id)} className="bg-gray-50 dark:bg-slate-800/50 py-3 rounded-xl flex-row items-center justify-center mb-4">
                 <Server size={14} color="#64748b" />
-                <Text className="text-[9px] font-black uppercase text-slate-500 ml-2">
-                    {isExpanded ? 'Hide Services' : 'Inspect Services'}
-                </Text>
-                {isExpanded ? <ChevronUp size={14} color="#64748b" className="ml-1" /> : <ChevronDown size={14} color="#64748b" className="ml-1" />}
+                <Text className="text-[9px] font-black uppercase text-slate-500 ml-2">{isExpanded ? 'Hide Services' : 'Inspect Services'}</Text>
             </TouchableOpacity>
 
             {isExpanded && (
@@ -96,38 +86,69 @@ const AssetCard = ({ asset, isSelected, isExpanded, onSelect, onExpand, loadingS
                 </View>
             )}
 
-            {/* CONFIGURATION GRID (All 6 Inputs) */}
             <View className="bg-gray-50 dark:bg-slate-950/50 p-4 rounded-[2rem] border border-gray-100 dark:border-slate-800">
-                <Text className="text-[8px] font-black text-slate-400 uppercase mb-5 tracking-widest text-center italic">
-                    Business Context & Environmental Weights
-                </Text>
-                
                 <View className="flex-row flex-wrap justify-between">
                     {configFields.map((field) => (
-                        <CIASlider 
+                        <CIASlider
                             key={field.key}
-                            label={field.label} 
-                            value={context?.[field.key] ?? 5} 
-                            onChange={(v) => onContextUpdate(asset._id, field.key, v)} 
-                            disabled={!isSelected} 
-                            icon={field.icon} 
+                            label={field.label}
+                            value={context?.[field.key] ?? 5}
+                            onChange={(v) => onContextUpdate(asset._id, field.key, v)}
+                            disabled={!isSelected}
+                            icon={field.icon}
                         />
                     ))}
                 </View>
             </View>
         </View>
     );
-};
+});
 
-// --- MAIN SCREEN ---
+// Move this OUTSIDE and use memo to prevent unnecessary re-renders
+const ListHeader = memo(({ searchTerm, setSearchTerm, scanType, setScanType, onStartScan, selectedCount }) => (
+    <View className="bg-white dark:bg-[#0b0f19] px-6 py-4 border-b border-gray-100 dark:border-slate-900">
+        <View className="bg-slate-900 dark:bg-[#111827] p-5 rounded-[2rem] flex-row justify-between items-center shadow-md mb-4">
+            <View className="flex-row items-center">
+                <View className="p-2 rounded-xl bg-orange-500">
+                    <Settings2 size={18} color="white" />
+                </View>
+                <View className="ml-3">
+                    <Text className="text-white font-black text-[10px] uppercase">Engine</Text>
+                    <View className="flex-row gap-4 mt-1">
+                        {['soft', 'deep'].map(type => (
+                            <TouchableOpacity key={type} onPress={() => setScanType(type)}>
+                                <Text className={`text-[8px] font-black uppercase ${scanType === type ? 'text-orange-500' : 'text-slate-500'}`}>
+                                    {type}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </View>
+            </View>
+            <TouchableOpacity
+                onPress={onStartScan}
+                disabled={selectedCount === 0}
+                className={`bg-white px-6 py-3 rounded-2xl ${selectedCount === 0 ? 'opacity-30' : 'opacity-100'}`}
+            >
+                <Text className="text-black font-black text-[10px] uppercase">Run Audit</Text>
+            </TouchableOpacity>
+        </View>
+        <TextInput
+            placeholder="Search assets..."
+            placeholderTextColor="#64748b"
+            value={searchTerm}
+            onChangeText={setSearchTerm}
+            className="bg-gray-50 dark:bg-[#111827] border border-gray-100 dark:border-slate-800 rounded-2xl p-4 text-slate-900 dark:text-white font-bold"
+        />
+    </View>
+));
+
+// --- 2. MAIN COMPONENT ---
 
 export default function ScanScreen() {
     const router = useRouter();
-    const routerRef = useRef(router);
-    const { colorScheme } = useColorScheme();
-    const isDark = colorScheme === 'dark';
-
-    useEffect(() => { routerRef.current = router; }, [router]);
+    const insets = useSafeAreaInsets();
+    const isDark = useColorScheme() === 'dark';
 
     const [step, setStep] = useState(1);
     const [domainInput, setDomainInput] = useState("");
@@ -141,6 +162,7 @@ export default function ScanScreen() {
     const [assetContexts, setAssetContexts] = useState({});
     const [searchTerm, setSearchTerm] = useState("");
 
+    // Discovery Logic
     const handleDiscover = async () => {
         if (!domainInput) return;
         Keyboard.dismiss();
@@ -162,52 +184,36 @@ export default function ScanScreen() {
             setAssetContexts(initialContexts);
             setAssets(fetchedAssets);
             setStep(2);
-        } catch (err) { 
-            console.error("Discovery failed", err); 
-        } finally { 
-            setLoading(false); 
+        } catch (err) {
+            console.error("Discovery failed", err);
+        } finally {
+            setLoading(false);
         }
     };
 
-    const toggleServices = async (assetId) => {
-        if (expandedAssetId === assetId) {
-            setExpandedAssetId(null);
-            return;
-        }
-        setExpandedAssetId(assetId);
+    const toggleServices = useCallback(async (assetId) => {
+        setExpandedAssetId(prev => prev === assetId ? null : assetId);
         if (!assetServices[assetId]) {
             setLoadingServices(true);
             try {
                 const res = await API.get(`/services/${assetId}/services`);
                 const serviceData = Array.isArray(res.data) ? res.data : (res.data.services || []);
                 setAssetServices(prev => ({ ...prev, [assetId]: serviceData }));
-            } catch (err) { 
-                console.error(err); 
-            } finally { 
-                setLoadingServices(false); 
-            }
+            } catch (err) { console.error(err); }
+            finally { setLoadingServices(false); }
         }
-    };
+    }, [assetServices]);
 
-    const handleSelectAsset = (id) => {
-        setSelectedAssets(prev => 
-            prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]
-        );
-    };
+    const handleSelectAsset = useCallback((id) => {
+        setSelectedAssets(prev => prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]);
+    }, []);
 
-    const updateContext = (assetId, key, val) => {
+    const updateContext = useCallback((assetId, key, val) => {
         setAssetContexts(prev => ({
             ...prev,
             [assetId]: { ...prev[assetId], [key]: val }
         }));
-    };
-
-    const filteredAssets = useMemo(() => {
-        return assets.filter(asset =>
-            asset.host?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            asset.ip?.includes(searchTerm)
-        );
-    }, [assets, searchTerm]);
+    }, []);
 
     const handleStartScan = async () => {
         if (selectedAssets.length === 0) return;
@@ -222,94 +228,87 @@ export default function ScanScreen() {
                 }))
             };
             const res = await API.post("/scan", payload);
-
-            if (routerRef.current) {
-                routerRef.current.push({
-                    pathname: '/results',
-                    params: { activeScanId: res.data.scanId, domainName: domainInput }
-                });
-            }
-        } catch (err) { 
-            console.error("Scan Launch Failed:", err); 
-        } finally { 
-            setLoading(false); 
-        }
+            setStep(1);
+            router.push({
+                pathname: '/results',
+                params: { activeScanId: res.data.scanId, domainName: domainInput }
+            });
+        } catch (err) { console.error("Scan Launch Failed:", err); }
+        finally { setLoading(false); }
     };
+
+    const filteredAssets = useMemo(() => {
+        return assets.filter(asset =>
+            asset.host?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            asset.ip?.includes(searchTerm)
+        );
+    }, [assets, searchTerm]);
 
     return (
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                <View className="flex-1 bg-white dark:bg-[#0b0f19]">
-                    {step === 1 ? (
-                        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
-                            <View className="px-8 py-10 items-center">
-                                <Globe size={50} color="#f97316" className="mb-6" />
-                                <Text className="text-3xl font-black text-slate-900 dark:text-white uppercase italic text-center mb-8 tracking-tighter">Infrastructure Mapping</Text>
-                                <TextInput
-                                    placeholder="e.g. internal-admin.net"
-                                    placeholderTextColor="#64748b"
-                                    value={domainInput}
-                                    onChangeText={setDomainInput}
-                                    autoCapitalize="none"
-                                    className="w-full bg-gray-50 dark:bg-[#111827] border-2 border-gray-100 dark:border-slate-800 rounded-3xl p-5 text-lg font-bold text-slate-900 dark:text-white"
-                                />
-                                <TouchableOpacity onPress={handleDiscover} disabled={loading} className="w-full bg-slate-900 dark:bg-orange-500 mt-4 p-5 rounded-3xl items-center shadow-lg">
-                                    {loading ? <ActivityIndicator color="white" /> : <Text className="text-white font-black uppercase tracking-widest">Discover Assets</Text>}
-                                </TouchableOpacity>
-                            </View>
-                        </ScrollView>
-                    ) : (
-                        <View className="flex-1">
-                            <ScrollView className="flex-1" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-                                <View className="bg-white dark:bg-[#0b0f19] px-6 py-4 border-b border-gray-100 dark:border-slate-900">
-                                    <View className="bg-slate-900 dark:bg-[#111827] p-5 rounded-[2rem] flex-row justify-between items-center shadow-md">
-                                        <View className="flex-row items-center">
-                                            <View className="p-2 rounded-xl bg-orange-500"><Settings2 size={18} color="white" /></View>
-                                            <View className="ml-3">
-                                                <Text className="text-white font-black text-[10px] uppercase">Engine</Text>
-                                                <View className="flex-row gap-4 mt-1">
-                                                    {['soft', 'deep'].map(type => (
-                                                        <TouchableOpacity key={type} onPress={() => setScanType(type)}>
-                                                            <Text className={`text-[8px] font-black uppercase ${scanType === type ? 'text-orange-500' : 'text-slate-500'}`}>{type}</Text>
-                                                        </TouchableOpacity>
-                                                    ))}
-                                                </View>
-                                            </View>
-                                        </View>
-                                        <TouchableOpacity onPress={handleStartScan} disabled={selectedAssets.length === 0} className={`bg-white px-6 py-3 rounded-2xl ${selectedAssets.length === 0 ? 'opacity-30' : 'opacity-100'}`}>
-                                            <Text className="text-black font-black text-[10px] uppercase">Run Audit</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                    <TextInput
-                                        placeholder="Search assets..."
-                                        value={searchTerm}
-                                        onChangeText={setSearchTerm}
-                                        className="bg-gray-50 dark:bg-[#111827] border border-gray-100 dark:border-slate-800 rounded-2xl p-4 mt-4 text-slate-900 dark:text-white font-bold"
-                                    />
-                                </View>
-
-                                <View className="p-6">
-                                    {filteredAssets.map((asset, index) => (
-                                        <AssetCard
-                                            key={asset._id || `asset-${index}`}
-                                            asset={asset}
-                                            isDark={isDark}
-                                            isSelected={selectedAssets.includes(asset._id)}
-                                            isExpanded={expandedAssetId === asset._id}
-                                            onSelect={handleSelectAsset}
-                                            onExpand={toggleServices}
-                                            loadingServices={loadingServices}
-                                            services={assetServices[asset._id]}
-                                            context={assetContexts[asset._id]}
-                                            onContextUpdate={updateContext}
-                                        />
-                                    ))}
-                                </View>
-                            </ScrollView>
+            <View className="flex-1 bg-white dark:bg-[#0b0f19]">
+                {step === 1 ? (
+                    <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} keyboardShouldPersistTaps="handled">
+                        <View className="px-8 py-10 items-center">
+                            <Globe size={50} color="#f97316" className="mb-6" />
+                            <Text className="text-3xl font-black text-slate-900 dark:text-white uppercase italic text-center mb-8 tracking-tighter">Infrastructure Mapping</Text>
+                            <TextInput
+                                placeholder="e.g. internal-admin.net"
+                                placeholderTextColor="#64748b"
+                                value={domainInput}
+                                onChangeText={setDomainInput}
+                                autoCapitalize="none"
+                                className="w-full bg-gray-50 dark:bg-[#111827] border-2 border-gray-100 dark:border-slate-800 rounded-3xl p-5 text-lg font-bold text-slate-900 dark:text-white"
+                            />
+                            <TouchableOpacity onPress={handleDiscover} disabled={loading} className="w-full bg-slate-900 dark:bg-orange-500 mt-4 p-5 rounded-3xl items-center shadow-lg">
+                                {loading ? <ActivityIndicator color="white" /> : <Text className="text-white font-black uppercase tracking-widest">Discover Assets</Text>}
+                            </TouchableOpacity>
                         </View>
-                    )}
-                </View>
-            </TouchableWithoutFeedback>
+                    </ScrollView>
+                ) : (
+                    <FlatList
+                        data={filteredAssets}
+                        keyExtractor={(item) => item._id}
+                        initialNumToRender={5}
+                        maxToRenderPerBatch={5}
+                        windowSize={5}
+                        removeClippedSubviews={true}
+                        ListHeaderComponent={
+                            <ListHeader
+                                searchTerm={searchTerm}
+                                setSearchTerm={setSearchTerm}
+                                scanType={scanType}
+                                setScanType={setScanType}
+                                onStartScan={handleStartScan}
+                                selectedCount={selectedAssets.length}
+                            />
+                        }
+                        stickyHeaderIndices={[0]}
+                        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+                        renderItem={({ item }) => (
+                            <AssetCard
+                                asset={item}
+                                isDark={isDark}
+                                isSelected={selectedAssets.includes(item._id)}
+                                isExpanded={expandedAssetId === item._id}
+                                onSelect={handleSelectAsset}
+                                onExpand={toggleServices}
+                                loadingServices={loadingServices}
+                                services={assetServices[item._id]}
+                                context={assetContexts[item._id]}
+                                onContextUpdate={updateContext}
+                            />
+                        )}
+                    />
+                )}
+
+                {loading && step === 2 && (
+                    <View className="absolute inset-0 bg-white/80 dark:bg-black/80 justify-center items-center z-50">
+                        <Loader2 size={40} color="#f97316" className="animate-spin" />
+                        <Text className="text-slate-400 font-black uppercase text-[10px] mt-4 tracking-widest">Launching Neural Scan...</Text>
+                    </View>
+                )}
+            </View>
         </KeyboardAvoidingView>
     );
 }

@@ -53,6 +53,22 @@ export default function TabLayout() {
           headerTitle: "SCAN ANALYSIS" 
         }} 
       />
+      <Tabs.Screen 
+        name="inventory" 
+        options={{ 
+          href: null, // This is the magic line that hides it
+          headerShown: true, 
+          headerTitle: "Asset Inventory" 
+        }} 
+      />
+      <Tabs.Screen 
+        name="cbom" 
+        options={{ 
+          href: null, // This is the magic line that hides it
+          headerShown: true, 
+          headerTitle: "CBOM" 
+        }} 
+      />
     </Tabs>
   );
 }

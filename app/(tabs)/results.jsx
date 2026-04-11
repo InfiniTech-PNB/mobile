@@ -149,13 +149,28 @@ export default function ScanResultsScreen() {
             setScanResults(res.data);
             if (res.data.length === 0) throw new Error("SCAN_EMPTY");
 
+            // 2. CBOM Synchronization
             setStatusMsg("Synchronizing CBOM...");
-            const cbomRes = await API.get(`/cbom/${activeScanId}/cbom`).catch(() => null);
-            if (cbomRes) setCbomData(cbomRes.data);
+            try {
+                // Using a standard await instead of inline catch to prevent transpiler confusion
+                const cbomResponse = await API.post(`/cbom/${activeScanId}`, { mode: "aggregate" });
+                if (cbomResponse?.data) {
+                    setCbomData(cbomResponse.data.cbom);
+                }
+            } catch (cbomErr) {
+                console.warn("CBOM sync non-critical failure", cbomErr);
+            }
 
+            // 3. AI Roadmap
             setStatusMsg("AI Engine generating roadmap...");
-            const recRes = await API.get(`/scan/${activeScanId}/recommendations`).catch(() => null);
-            if (recRes) setAssetPlans(recRes.data);
+            try {
+                const roadmapResponse = await API.post(`/scan/${activeScanId}/recommendations`);
+                if (roadmapResponse?.data) {
+                    setAssetPlans(roadmapResponse.data);
+                }
+            } catch (roadmapErr) {
+                console.warn("Roadmap sync non-critical failure", roadmapErr);
+            }
 
             setStatusMsg("Analysis Complete.");
         } catch (err) {
@@ -224,6 +239,7 @@ export default function ScanResultsScreen() {
                                             <Text className="font-black text-slate-900 dark:text-white uppercase text-sm" numberOfLines={1}>{res.assetId?.host}</Text>
                                             <Text className="text-[10px] font-bold text-slate-400 mt-1">{res.assetId?.ip} • PORT {res.port}</Text>
                                         </View>
+                                        <Text style={{ padding: 12, borderRadius: 16, color: '#f97316' }}>{Math.round(res.pqcReadyScore * 1000)}</Text>
                                     </View>
                                     <ChevronDown size={20} color="#94a3b8" style={{ transform: [{ rotate: isExpanded ? '180deg' : '0deg' }] }} />
                                 </TouchableOpacity>
