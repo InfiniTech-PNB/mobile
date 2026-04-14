@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
     View, Text, ScrollView, TouchableOpacity, 
-    ActivityIndicator, Platform, useColorScheme 
+    ActivityIndicator, Platform, useColorScheme , RefreshControl
 } from 'react-native';
 import { 
     Download, ArrowLeft, Globe, ShieldCheck, 
@@ -34,19 +34,28 @@ const ExecutivesReportingTab = () => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
+    const fetchSummary = async () => {
+        try {
+            const res = await API.get("/reports/executive-summary");
+            setData(res.data);
+        } catch (err) { 
+            console.error("HUD Fetch Error:", err); 
+        } finally { 
+            setLoading(false); 
+            setRefreshing(false);
+        }
+    };
     useEffect(() => {
-        const fetchSummary = async () => {
-            try {
-                const res = await API.get("/reports/executive-summary");
-                setData(res.data);
-            } catch (err) { 
-                console.error("HUD Fetch Error:", err); 
-            } finally { 
-                setLoading(false); 
-            }
-        };
         fetchSummary();
+    }, []);
+
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        setData(null); // Reset to initial state
+        await fetchSummary();
+        setRefreshing(false);
     }, []);
 
     const handleDownload = async () => {
@@ -77,7 +86,7 @@ const ExecutivesReportingTab = () => {
         }
     };
 
-    if (loading) return (
+    if (loading || !data) return ( // Added !data check to show loader on refresh reset
         <View className="flex-1 bg-white dark:bg-[#0b0f19] items-center justify-center">
             <ActivityIndicator size="large" color="#f97316" />
             <Text className="font-black uppercase text-[10px] tracking-[0.3em] text-slate-400 mt-4">
@@ -90,6 +99,14 @@ const ExecutivesReportingTab = () => {
         <ScrollView 
             className="flex-1 bg-white dark:bg-[#0b0f19]"
             showsVerticalScrollIndicator={false}
+            refreshControl={
+                <RefreshControl 
+                    refreshing={refreshing} 
+                    onRefresh={onRefresh} 
+                    tintColor="#f97316" // Matches your orange theme
+                    colors={["#f97316"]} 
+                />
+            }
         >
             <View style={{ paddingTop: insets.top + 20, paddingHorizontal: 24, paddingBottom: 100 }}>
                 

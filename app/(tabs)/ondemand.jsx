@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { 
-    View, Text, ScrollView, TouchableOpacity, TextInput, 
-    ActivityIndicator, Alert, Modal, FlatList, useColorScheme 
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+    View, Text, ScrollView, TouchableOpacity, TextInput,
+    ActivityIndicator, Alert, Modal, FlatList, useColorScheme, RefreshControl
 } from 'react-native';
-import { 
-    Zap, ArrowRight, ArrowLeft, Database, FileCode, 
+import {
+    Zap, ArrowRight, ArrowLeft, Database, FileCode,
     Activity, ChevronDown, X, Globe, Mail, ShieldCheck
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
@@ -28,16 +28,30 @@ export default function OnDemandReportingScreen() {
     const [formData, setFormData] = useState(INITIAL_STATE);
     const [loading, setLoading] = useState(false);
     const [isDomainModalOpen, setIsDomainModalOpen] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
     // Load Domains (Registry Scope)
+    const fetchDomains = async () => {
+        try {
+            const res = await API.get("/reports/schedule-init");
+            setDomains(res.data.domains || []);
+        } catch (err) { console.error("Domain load failed", err); }
+        finally {
+            setRefreshing(false); // ✅ Stop the spinner
+        }
+    };
     useEffect(() => {
-        const fetchDomains = async () => {
-            try {
-                const res = await API.get("/reports/schedule-init");
-                setDomains(res.data.domains || []);
-            } catch (err) { console.error("Domain load failed", err); }
-        };
         fetchDomains();
+    }, []);
+
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+
+        // RESET TO INITIAL STATE
+        setFormData(INITIAL_STATE);
+
+        // Re-fetch base data (domains)
+        await fetchDomains();
     }, []);
 
     const handleDomainSelect = (domain) => {
@@ -74,9 +88,16 @@ export default function OnDemandReportingScreen() {
 
     return (
         <View className="flex-1 bg-white dark:bg-[#0b0f19]">
-            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" refreshControl={
+                <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    tintColor="#f97316" // Match your orange theme
+                    colors={["#f97316"]}
+                />
+            }>
                 <View style={{ paddingTop: insets.top + 20, paddingHorizontal: 24, paddingBottom: 100 }}>
-                    
+
                     {/* Header Nav */}
                     <View className="flex-row justify-between items-center mb-6">
                         <TouchableOpacity onPress={() => router.back()} className="flex-row items-center">
@@ -102,12 +123,12 @@ export default function OnDemandReportingScreen() {
                         {/* 1. Report Name */}
                         <View>
                             <Text className="text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Audit Subject Name</Text>
-                            <TextInput 
+                            <TextInput
                                 className="bg-slate-50 dark:bg-slate-900 mb-4 p-5 rounded-2xl text-slate-900 dark:text-white font-black text-xs border border-slate-100 dark:border-slate-800"
                                 placeholder="E.G. EMERGENCY COMPLIANCE CHECK"
                                 placeholderTextColor="#64748b"
                                 value={formData.reportName}
-                                onChangeText={(t) => setFormData({...formData, reportName: t.toUpperCase()})}
+                                onChangeText={(t) => setFormData({ ...formData, reportName: t.toUpperCase() })}
                             />
                         </View>
 
@@ -120,10 +141,10 @@ export default function OnDemandReportingScreen() {
                                     { id: 'cboms', label: 'CBOMs', icon: FileCode },
                                     { id: 'scanResults', label: 'Scans', icon: Activity }
                                 ].map(mod => (
-                                    <TouchableOpacity 
+                                    <TouchableOpacity
                                         key={mod.id}
                                         onPress={() => setFormData({
-                                            ...formData, 
+                                            ...formData,
                                             includeSections: { ...formData.includeSections, [mod.id]: !formData.includeSections[mod.id] }
                                         })}
                                         className={`flex-1 flex-row items-center justify-center gap-2 p-4 rounded-2xl border ${formData.includeSections[mod.id] ? 'bg-orange-500 border-orange-500' : 'bg-slate-50 dark:bg-slate-900 border-slate-100 dark:border-slate-800'}`}
@@ -138,7 +159,7 @@ export default function OnDemandReportingScreen() {
                         {/* 3. Domain Dropdown */}
                         <View>
                             <Text className="text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Domain Scope</Text>
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 onPress={() => setIsDomainModalOpen(true)}
                                 className="bg-slate-50 dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 flex-row justify-between items-center"
                             >
@@ -156,15 +177,15 @@ export default function OnDemandReportingScreen() {
                                 <Mail size={18} color="#f97316" />
                                 <Text className="text-white font-black uppercase text-[10px] tracking-widest">Instant Email Delivery</Text>
                             </View>
-                            <TextInput 
+                            <TextInput
                                 className="bg-slate-800 p-4 rounded-xl text-white font-bold text-xs mb-8 border border-slate-700"
                                 value={formData.email}
-                                onChangeText={(t) => setFormData({...formData, email: t})}
+                                onChangeText={(t) => setFormData({ ...formData, email: t })}
                                 keyboardType="email-address"
                                 autoCapitalize="none"
                             />
-                            
-                            <TouchableOpacity 
+
+                            <TouchableOpacity
                                 onPress={handleInstantTrigger}
                                 disabled={loading}
                                 className="bg-orange-500 p-6 rounded-2xl flex-row justify-center items-center gap-3 active:scale-95 shadow-lg shadow-orange-500/50"
@@ -203,7 +224,7 @@ export default function OnDemandReportingScreen() {
                             keyExtractor={(item) => item._id}
                             contentContainerStyle={{ padding: 16 }}
                             renderItem={({ item }) => (
-                                <TouchableOpacity 
+                                <TouchableOpacity
                                     onPress={() => handleDomainSelect(item)}
                                     className="p-5 mb-2 rounded-2xl bg-slate-50 dark:bg-slate-800 flex-row items-center gap-4"
                                 >

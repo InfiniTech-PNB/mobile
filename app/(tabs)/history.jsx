@@ -1,7 +1,7 @@
 import React, { useState, useEffect, memo, useCallback } from 'react';
 import {
     View, Text, TouchableOpacity, ActivityIndicator,
-    Platform, Alert, Modal, FlatList, useColorScheme, UIManager, LayoutAnimation
+    Platform, Alert, Modal, FlatList, useColorScheme, UIManager, LayoutAnimation, RefreshControl
 } from 'react-native';
 import {
     History, Globe, Clock, Loader2, Search, Activity,
@@ -185,14 +185,36 @@ export default function HistoryScreen() {
     const [isScanModalOpen, setIsScanModalOpen] = useState(false);
     const [expandedAssetId, setExpandedAssetId] = useState(null);
 
+    const [refreshing, setRefreshing] = useState(false);
+
+    const fetchDomains = async () => {
+        try {
+            const res = await API.get("/domains");
+            setDomains(res.data || []);
+        } catch (err) { console.error(err); }
+        finally {
+            setRefreshing(false); // ✅ Stop spinner
+        }
+    };
     useEffect(() => {
-        const fetchDomains = async () => {
-            try {
-                const res = await API.get("/domains");
-                setDomains(res.data || []);
-            } catch (err) { console.error(err); }
-        };
         fetchDomains();
+    }, []);
+
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        
+        // RESET TO INITIAL STATE
+        setSelectedDomain("");
+        setSelectedScan("");
+        setScans([]);
+        setDomainSummary(null);
+        setCryptoInventory([]);
+        setScanResults([]);
+        setAssetPlans([]);
+        setExpandedAssetId(null);
+
+        // Re-fetch base data
+        await fetchDomains();
     }, []);
 
     const handleDomainSelect = async (domain) => {
@@ -330,6 +352,14 @@ export default function HistoryScreen() {
                 renderItem={({ item }) => <AssetCard res={item} isExpanded={expandedAssetId === item._id} onToggle={toggleAsset} assetPlans={assetPlans} isDark={isDark} />}
                 ListEmptyComponent={!loading && <View style={{ paddingVertical: 80, alignItems: 'center', opacity: 0.3 }}><Search size={60} color="#94a3b8" /><Text style={{ fontSize: 10, fontWeight: '900', color: '#64748b', marginTop: 16, textTransform: 'uppercase' }}>Neural Sync Required</Text></View>}
                 contentContainerStyle={{ paddingBottom: 100 }}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        tintColor="#f97316"
+                        colors={["#f97316"]}
+                    />
+                }
             />
 
             {loading && <View style={{ position: 'absolute', inset: 0, backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.7)', justifyContent: 'center', alignItems: 'center', zIndex: 10 }}><Loader2 size={40} color="#f97316" className="animate-spin" /><Text style={{ color: '#94a3b8', fontWeight: '900', fontSize: 10, marginTop: 16, textTransform: 'uppercase' }}>Restoring Environment...</Text></View>}

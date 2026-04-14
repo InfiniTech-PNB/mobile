@@ -1,7 +1,7 @@
 import React, { useState, useEffect, memo, useCallback } from 'react';
 import {
     View, Text, TouchableOpacity, TextInput,
-    ActivityIndicator, LayoutAnimation, Platform, UIManager, Modal, FlatList, useColorScheme
+    ActivityIndicator, LayoutAnimation, Platform, UIManager, Modal, FlatList, useColorScheme, RefreshControl
 } from 'react-native';
 import {
     Globe, Server, Search, Loader2, Activity, Cpu,
@@ -170,15 +170,33 @@ export default function AssetInventoryScreen() {
     const [expandedAssetId, setExpandedAssetId] = useState(null);
     const [detailedServices, setDetailedServices] = useState({});
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
+    const fetchDomains = async () => {
+        try {
+            const res = await API.get("/domains");
+            setDomains(res.data || []);
+        } catch (err) { console.error("Error fetching domains:", err); }
+        finally {
+            setRefreshing(false); // ✅ Ensure spinner stops
+        }
+    };
     useEffect(() => {
-        const fetchDomains = async () => {
-            try {
-                const res = await API.get("/domains");
-                setDomains(res.data || []);
-            } catch (err) { console.error("Error fetching domains:", err); }
-        };
         fetchDomains();
+    }, []);
+
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+
+        // RESET TO INITIAL STATE
+        setSelectedDomain("");
+        setAssets([]);
+        setSearchTerm("");
+        setExpandedAssetId(null);
+        setDetailedServices({});
+
+        // Re-fetch base domain list
+        await fetchDomains();
     }, []);
 
     const handleDomainSelect = async (domain) => {
@@ -245,6 +263,14 @@ export default function AssetInventoryScreen() {
                         </Text>
                     </View>
                 )}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        tintColor="#3b82f6" // Matches your blue theme
+                        colors={["#3b82f6"]} 
+                    />
+                }
                 contentContainerStyle={{ paddingBottom: 100 }}
             />
 

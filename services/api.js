@@ -4,7 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 const API = axios.create({
     // 1. Ensure this IP is correct and the PORT matches your backend!
     // baseURL: 'http://10.191.217.191:3000/api',
-    baseURL: 'http://ec2-16-112-159-207.ap-south-2.compute.amazonaws.com:3000/api',
+    baseURL: 'https://api.mzdev.in/api',
     headers: {
         'Content-Type': 'application/json',
     },

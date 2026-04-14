@@ -1,7 +1,7 @@
 import React, { useState, useEffect, memo, useCallback } from 'react';
 import {
     View, Text, ScrollView, TouchableOpacity, ActivityIndicator,
-    Platform, Alert, Modal, FlatList, useColorScheme, UIManager
+    Platform, Alert, Modal, FlatList, useColorScheme, UIManager, RefreshControl
 } from 'react-native';
 import {
     Database, Globe, Clock, Loader2, Search,
@@ -78,16 +78,33 @@ export default function CBOMHistoryScreen() {
     const [activeTechTab, setActiveTechTab] = useState("algorithms");
     const [isDomainModalOpen, setIsDomainModalOpen] = useState(false);
     const [isScanModalOpen, setIsScanModalOpen] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
     // Initial Load: Fetch Domains
+    const fetchDomains = async () => {
+        try {
+            const res = await API.get("/domains");
+            setDomains(res.data || []);
+        } catch (err) { console.error("Error fetching domains:", err); }
+    };
     useEffect(() => {
-        const fetchDomains = async () => {
-            try {
-                const res = await API.get("/domains");
-                setDomains(res.data || []);
-            } catch (err) { console.error("Error fetching domains:", err); }
-        };
         fetchDomains();
+    }, []);
+
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+
+        // 1. Reset all selection and data states to initial values
+        setSelectedDomain("");
+        setSelectedScan("");
+        setScans([]);
+        setCbomData(null);
+        setActiveTechTab("algorithms");
+
+        // 2. Re-fetch the base data (domains)
+        await fetchDomains();
+
+        setRefreshing(false);
     }, []);
 
     // Fetch Scans when Domain changes
@@ -148,7 +165,14 @@ export default function CBOMHistoryScreen() {
 
     return (
         <View style={{ flex: 1, backgroundColor: isDark ? '#0b0f19' : '#fff' }}>
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView showsVerticalScrollIndicator={false} refreshControl={
+                <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    tintColor="#f97316" // Matches your orange theme
+                    colors={["#f97316"]}
+                />
+            }>
 
                 {/* --- HEADER --- */}
                 <View style={{ paddingTop: insets.top + 20, paddingHorizontal: 24, paddingBottom: 24 }}>

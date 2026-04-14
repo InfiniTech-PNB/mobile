@@ -1,12 +1,12 @@
 import React, { useState, useEffect, memo, useCallback } from 'react';
-import { 
-    View, Text, ScrollView, TouchableOpacity, TextInput, 
-    ActivityIndicator, Alert, Modal, FlatList, useColorScheme, Platform 
+import {
+    View, Text, ScrollView, TouchableOpacity, TextInput,
+    ActivityIndicator, Alert, Modal, FlatList, useColorScheme, Platform, RefreshControl
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker'; // Import the picker
-import { 
-    Calendar, Clock, Mail, ArrowRight, ArrowLeft, 
-    Database, FileCode, Activity, Trash2, 
+import {
+    Calendar, Clock, Mail, ArrowRight, ArrowLeft,
+    Database, FileCode, Activity, Trash2,
     CheckCircle2, ChevronDown, X, Cpu, Zap, Lock, Shield, Hash, Globe, ShieldCheck
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
@@ -36,7 +36,7 @@ const MetricSlider = memo(({ label, value, onChange, disabled, icon, isDark }) =
         </View>
         <View className="flex-row gap-0.5">
             {[...Array(11).keys()].map(i => (
-                <TouchableOpacity 
+                <TouchableOpacity
                     key={i}
                     onPress={() => !disabled && onChange(i)}
                     className={`h-1.5 flex-1 rounded-full ${i <= value ? 'bg-orange-500' : (isDark ? 'bg-slate-800' : 'bg-slate-200')}`}
@@ -57,31 +57,48 @@ export default function ScheduledReportingScreen() {
     const [selectedAssets, setSelectedAssets] = useState([]);
     const [activeSchedules, setActiveSchedules] = useState([]);
     const [loading, setLoading] = useState(false);
-    
+
     // UI States
     const [isDomainModalOpen, setIsDomainModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const [showTimePicker, setShowTimePicker] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
     const configFields = [
-        { key: 'assetCriticality', label: 'Criticality', icon: <Shield size={10} color="#94a3b8"/> },
-        { key: 'confidentialityWeight', label: 'Confidentiality', icon: <Lock size={10} color="#94a3b8"/> },
-        { key: 'integrityWeight', label: 'Integrity', icon: <Activity size={10} color="#94a3b8"/> },
-        { key: 'availabilityWeight', label: 'Availability', icon: <Zap size={10} color="#94a3b8"/> },
-        { key: 'slaRequirement', label: 'SLA Priority', icon: <Cpu size={10} color="#94a3b8"/> },
-        { key: 'dependentServices', label: 'Dependencies', icon: <Hash size={10} color="#94a3b8"/> },
+        { key: 'assetCriticality', label: 'Criticality', icon: <Shield size={10} color="#94a3b8" /> },
+        { key: 'confidentialityWeight', label: 'Confidentiality', icon: <Lock size={10} color="#94a3b8" /> },
+        { key: 'integrityWeight', label: 'Integrity', icon: <Activity size={10} color="#94a3b8" /> },
+        { key: 'availabilityWeight', label: 'Availability', icon: <Zap size={10} color="#94a3b8" /> },
+        { key: 'slaRequirement', label: 'SLA Priority', icon: <Cpu size={10} color="#94a3b8" /> },
+        { key: 'dependentServices', label: 'Dependencies', icon: <Hash size={10} color="#94a3b8" /> },
     ];
 
+    const init = async () => {
+        try {
+            const res = await API.get("/reports/schedule-init");
+            setDomains(res.data.domains || []);
+            const schedRes = await API.get("/reports/my-schedule");
+            setActiveSchedules(schedRes.data || []);
+        } catch (err) { console.error(err); }
+        finally {
+            setRefreshing(false); // ✅ Stop the spinner
+        }
+    };
     useEffect(() => {
-        const init = async () => {
-            try {
-                const res = await API.get("/reports/schedule-init");
-                setDomains(res.data.domains || []);
-                const schedRes = await API.get("/reports/my-schedule");
-                setActiveSchedules(schedRes.data || []);
-            } catch (err) { console.error(err); }
-        };
         init();
+    }, []);
+
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+
+        // RESET TO INITIAL STATE
+        setFormData(DEFAULT_FORM_STATE);
+        setAvailableAssets([]);
+        setSelectedAssets([]);
+        setSearchTerm("");
+
+        // Re-fetch base registry data (domains and active schedules)
+        await init();
     }, []);
 
     // Time Formatting Logic
@@ -117,7 +134,7 @@ export default function ScheduledReportingScreen() {
     };
 
     const updateMetric = (assetId, key, val) => {
-        setSelectedAssets(prev => prev.map(a => 
+        setSelectedAssets(prev => prev.map(a =>
             a.assetId === assetId ? { ...a, businessContext: { ...a.businessContext, [key]: val } } : a
         ));
     };
@@ -157,9 +174,16 @@ export default function ScheduledReportingScreen() {
 
     return (
         <View className="flex-1 bg-white dark:bg-[#0b0f19]">
-            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" refreshControl={
+                <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    tintColor="#f97316" // Matches your orange theme
+                    colors={["#f97316"]}
+                />
+            }>
                 <View style={{ paddingTop: insets.top + 20, paddingHorizontal: 24, paddingBottom: 150 }}>
-                    
+
                     {/* Header */}
                     <TouchableOpacity onPress={() => router.back()} className="flex-row items-center mb-6">
                         <ArrowLeft size={16} color="#94a3b8" />
@@ -178,12 +202,12 @@ export default function ScheduledReportingScreen() {
                         {/* Audit Name */}
                         <View>
                             <Text className="text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Schedule Identifier</Text>
-                            <TextInput 
+                            <TextInput
                                 className="bg-slate-50 dark:bg-slate-900 mb-5 p-5 rounded-2xl text-slate-900 dark:text-white font-black text-xs border border-slate-100 dark:border-slate-800"
                                 placeholder="E.G. WEEKLY INFRA AUDIT"
                                 placeholderTextColor="#64748b"
                                 value={formData.scheduleName}
-                                onChangeText={(t) => setFormData({...formData, scheduleName: t.toUpperCase()})}
+                                onChangeText={(t) => setFormData({ ...formData, scheduleName: t.toUpperCase() })}
                             />
                         </View>
 
@@ -192,9 +216,9 @@ export default function ScheduledReportingScreen() {
                             <Text className="text-[10px] font-black text-slate-400 uppercase mb-3 ml-1">Included Intelligence Modules</Text>
                             <View className="flex-row gap-2 mb-5">
                                 {[{ id: 'assets', label: 'Assets', icon: Database }, { id: 'cboms', label: 'CBOMs', icon: FileCode }, { id: 'scanResults', label: 'Scans', icon: Activity }].map(mod => (
-                                    <TouchableOpacity 
+                                    <TouchableOpacity
                                         key={mod.id}
-                                        onPress={() => setFormData({...formData, includeSections: { ...formData.includeSections, [mod.id]: !formData.includeSections[mod.id] }})}
+                                        onPress={() => setFormData({ ...formData, includeSections: { ...formData.includeSections, [mod.id]: !formData.includeSections[mod.id] } })}
                                         className={`flex-1 flex-row items-center justify-center gap-2 p-4 rounded-2xl border ${formData.includeSections[mod.id] ? 'bg-orange-500 border-orange-500' : 'bg-slate-50 dark:bg-slate-900 border-slate-100 dark:border-slate-800'}`}
                                     >
                                         <mod.icon size={12} color={formData.includeSections[mod.id] ? 'white' : '#64748b'} />
@@ -254,12 +278,12 @@ export default function ScheduledReportingScreen() {
                                             </View>
                                             <View className="flex-row flex-wrap justify-between">
                                                 {configFields.map(field => (
-                                                    <MetricSlider 
+                                                    <MetricSlider
                                                         key={field.key}
                                                         label={field.label}
                                                         icon={field.icon}
-                                                        value={selection.businessContext[field.key]} 
-                                                        onChange={(v) => updateMetric(selection.assetId, field.key, v)} 
+                                                        value={selection.businessContext[field.key]}
+                                                        onChange={(v) => updateMetric(selection.assetId, field.key, v)}
                                                         isDark={isDark}
                                                     />
                                                 ))}
@@ -276,7 +300,7 @@ export default function ScheduledReportingScreen() {
                                 <Text className="text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Frequency</Text>
                                 <View className="flex-row bg-slate-50 dark:bg-slate-900 p-1 rounded-2xl border border-slate-100 dark:border-slate-800">
                                     {['Daily', 'Weekly', 'Monthly'].map(f => (
-                                        <TouchableOpacity key={f} onPress={() => setFormData({...formData, frequency: f})} className={`flex-1 py-3 rounded-xl ${formData.frequency === f ? 'bg-orange-500' : ''}`}>
+                                        <TouchableOpacity key={f} onPress={() => setFormData({ ...formData, frequency: f })} className={`flex-1 py-3 rounded-xl ${formData.frequency === f ? 'bg-orange-500' : ''}`}>
                                             <Text className={`text-center text-[9px] font-black uppercase ${formData.frequency === f ? 'text-white' : 'text-slate-500'}`}>{f}</Text>
                                         </TouchableOpacity>
                                     ))}
@@ -284,7 +308,7 @@ export default function ScheduledReportingScreen() {
                             </View>
                             <View className="flex-1">
                                 <Text className="text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Sync Time</Text>
-                                <TouchableOpacity 
+                                <TouchableOpacity
                                     onPress={() => setShowTimePicker(true)}
                                     className="bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 flex-row items-center h-[55px]"
                                 >
@@ -309,10 +333,10 @@ export default function ScheduledReportingScreen() {
                                 <Mail size={18} color="#f97316" />
                                 <Text className="text-white font-black uppercase text-[10px] tracking-widest">Email Delivery Registry</Text>
                             </View>
-                            <TextInput 
+                            <TextInput
                                 className="bg-slate-800 p-4 rounded-xl text-white font-bold text-xs mb-6 border border-slate-700"
                                 value={formData.email}
-                                onChangeText={(t) => setFormData({...formData, email: t})}
+                                onChangeText={(t) => setFormData({ ...formData, email: t })}
                                 keyboardType="email-address"
                                 autoCapitalize="none"
                             />

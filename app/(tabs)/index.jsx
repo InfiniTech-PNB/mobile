@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Svg, Circle } from 'react-native-svg';
 import { Globe, Server, ShieldCheck, ShieldAlert, Loader2, Activity, Cpu, LayoutGrid, Zap } from 'lucide-react-native';
@@ -7,6 +7,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import API from "../../services/api";
+
+import { RefreshControl } from 'react-native';
 
 // COMPONENT: Restored ChartContainer
 const ChartContainer = ({ title, children }) => (
@@ -47,39 +49,39 @@ const MultiSegmentPie = ({ data, total, colors, size = 140, strokeWidth = 16, ce
         <View className="items-center justify-center" style={{ width: size, height: size }}>
             <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
                 {/* Background Track (Ghost ring) */}
-                <Circle 
-                    cx={size / 2} 
-                    cy={size / 2} 
-                    r={radius} 
-                    stroke="#e2e8f0" 
-                    strokeWidth={strokeWidth} 
-                    fill="none" 
-                    opacity={0.2} 
+                <Circle
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    stroke="#e2e8f0"
+                    strokeWidth={strokeWidth}
+                    fill="none"
+                    opacity={0.2}
                 />
-                
+
                 {data?.map((item, index) => {
                     const val = parseFloat(item.value) || 0;
                     if (val === 0) return null;
 
                     const percentage = (val / safeTotal);
                     const strokeDashoffset = circumference * (1 - percentage);
-                    
+
                     // Calculate rotation: start from top (-90deg) and add the sum of previous segments
                     const angle = (accumulatedValue / safeTotal) * 360 - 90;
-                    
+
                     // Update accumulator for the next segment
                     accumulatedValue += val;
 
                     return (
-                        <Circle 
-                            key={index} 
-                            cx={size / 2} 
-                            cy={size / 2} 
+                        <Circle
+                            key={index}
+                            cx={size / 2}
+                            cy={size / 2}
                             r={radius}
-                            stroke={item.color || colors[index % colors.length]} 
-                            strokeWidth={strokeWidth} 
+                            stroke={item.color || colors[index % colors.length]}
+                            strokeWidth={strokeWidth}
                             fill="none"
-                            strokeDasharray={circumference} 
+                            strokeDasharray={circumference}
                             strokeDashoffset={strokeDashoffset}
                             strokeLinecap="round" // Rounded edges look more premium
                             transform={`rotate(${angle} ${size / 2} ${size / 2})`}
@@ -87,7 +89,7 @@ const MultiSegmentPie = ({ data, total, colors, size = 140, strokeWidth = 16, ce
                     );
                 })}
             </Svg>
-            
+
             {/* Center Labels */}
             <View className="absolute items-center justify-center">
                 <Text className="text-2xl font-black dark:text-white leading-tight">{centerLabel}</Text>
@@ -119,64 +121,56 @@ const HomeTab = () => {
     const router = useRouter();
 
     const { user, loading: authLoading } = useAuth();
+    const [refreshing, setRefreshing] = useState(false);
+
+    const fetchStats = async () => {
+        // 1. Only run if we have a user and a token string ready
+        if (authLoading || !user?.token) {
+            return;
+        }
+
+        try {
+            // setLoading(true); // Optional: uncomment if you want a loader on every re-focus
+            const res = await API.get("/dashboard/stats");
+
+            if (res.data) {
+                setStats(res.data);
+            }
+        } catch (err) {
+            console.log("Fetch Error Status:", err.response?.status);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
+
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        setStats(null); // ✅ Reset to initial state (triggers loader)
+        await fetchStats();
+    }, [user?.token, authLoading]);
 
     useEffect(() => {
-        const fetchStats = async () => {
-            // 1. Only run if we have a user and a token string ready
-            if (authLoading || !user?.token) {
-                return; 
-            }
-
-            try {
-                // setLoading(true); // Optional: uncomment if you want a loader on every re-focus
-                const res = await API.get("/dashboard/stats");
-                
-                if (res.data) {
-                    setStats(res.data);
-                }
-            } catch (err) {
-                console.log("Fetch Error Status:", err.response?.status);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchStats();
     }, [user?.token, authLoading]);
 
-    if (authLoading) return (
-        <View className="flex-1 justify-center items-center bg-white dark:bg-slate-950">
-            <ActivityIndicator color="#f59e0b" size="large" />
-            <Text className="text-[10px] font-black text-gray-500 mt-4 uppercase tracking-widest">Verifying Identity...</Text>
-        </View>
-    );
-
-    if (loading) return (
-        <View className="flex-1 justify-center items-center bg-white dark:bg-slate-950">
-            <ActivityIndicator color="#f59e0b" size="large" />
-            <Text className="text-[10px] font-black text-gray-500 mt-4 uppercase tracking-widest">Decrypting Dashboard...</Text>
-        </View>
-    );
-
-    // 4. Fallback if the fetch failed (no stats returned)
-    if (!stats) return (
-        <View className="flex-1 justify-center items-center bg-white dark:bg-slate-950 p-10">
-            <ShieldAlert size={48} color="#ef4444" />
-            <Text className="text-slate-900 dark:text-white font-black mt-4 text-center uppercase">System Offline</Text>
-            <Text className="text-slate-500 text-center mt-2 text-xs">Could not sync with the security node. Please check your connection.</Text>
-            <TouchableOpacity
-                onPress={() => setLoading(true)} // This triggers the useEffect again
-                className="mt-8 bg-slate-900 px-10 py-4 rounded-2xl"
-            >
-                <Text className="text-white font-black uppercase text-[10px]">Retry Connection</Text>
-            </TouchableOpacity>
-        </View>
-    );
+    if (authLoading || loading || !stats) {
+        return (
+            <View className="flex-1 justify-center items-center bg-white dark:bg-slate-950">
+                <ActivityIndicator color="#f59e0b" size="large" />
+                <Text className="text-[10px] font-black text-gray-500 mt-4 uppercase tracking-widest">
+                    {authLoading ? "Verifying Identity..." : "Decrypting Dashboard..."}
+                </Text>
+            </View>
+        );
+    }
 
     const COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'];
 
     return (
-        <ScrollView className="flex-1 bg-white dark:bg-[#0b0f19]" showsVerticalScrollIndicator={false}>
+        <ScrollView className="flex-1 bg-white dark:bg-[#0b0f19]" showsVerticalScrollIndicator={false} refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f59e0b" />
+        }>
             <View className="p-6" style={{ paddingBottom: insets.bottom + 20 }}>
 
                 <Text className="text-[10px] font-black text-gray-400 uppercase tracking-[3px] mb-2">Cyber Resilience Dashboard</Text>
