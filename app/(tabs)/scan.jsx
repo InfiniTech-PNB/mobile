@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import {
     Globe, CheckCircle2, Settings2, Server, Activity, Cpu,
-    Lock, Search, Hash, Zap, Shield, ShieldAlert, Info, ArrowRight, X
+    Lock, Search, Hash, Zap, Shield, ShieldAlert, Info, ArrowRight, X, Loader2
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -160,7 +160,7 @@ export default function ScanScreen() {
                 setTimeout(() => {
                     fetchAssets(domainId);
                     ws.close();
-                }, 1500);
+                }, 3000);
             }
         };
         ws.onerror = () => setLogs(prev => [...prev, "[ERROR] Connection interrupted. Retrying..."]);
@@ -281,14 +281,20 @@ export default function ScanScreen() {
                             </TouchableOpacity>
                         </View>
 
-                        {loading && (
+                        {loading && jobId && (
                             <View className="space-y-6">
-                                <View className="flex-row justify-between items-center px-2">
-                                    <View className="flex-row items-center gap-2">
-                                        <Activity size={14} color="#3b82f6" />
-                                        <Text className="text-[10px] font-black text-slate-900 dark:text-white uppercase">Discovery Active</Text>
+                                <View className="flex-row justify-between items-center px-2 bg-blue-500/10 p-4 rounded-2xl border border-blue-500/20">
+                                    <View className="flex-row items-center gap-3">
+                                        {/* Custom Pulse Dot */}
+                                        <View className="w-2 h-2 bg-blue-500 rounded-full animate-pulse shadow-[0_0_8px_#3b82f6]" />
+                                        <Text className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">
+                                            Live Neural Link Active
+                                        </Text>
                                     </View>
-                                    <Text className="text-[10px] font-bold text-slate-400 uppercase">Agent: {jobId?.split('-')[0] || 'INIT'}</Text>
+                                    <View className="flex-row items-center gap-2">
+                                        <ActivityIndicator size="small" color="#3b82f6" />
+                                        <Text className="text-[9px] font-bold text-slate-400 uppercase">Agent: {jobId?.split('-')[0]}</Text>
+                                    </View>
                                 </View>
 
                                 {/* Terminal UI Mapping */}
@@ -417,6 +423,16 @@ export default function ScanScreen() {
                     </View>
                 </Modal>
             </View>
+            {loading && !jobId && (
+                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.05)', justifyContent: 'center', alignItems: 'center', zIndex: 999 }}>
+                    <View className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] shadow-2xl border border-slate-100 dark:border-slate-800 items-center">
+                        <Loader2 size={32} color="#f97316" className="animate-spin" />
+                        <Text className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mt-4">
+                            Processing Request...
+                        </Text>
+                    </View>
+                </View>
+            )}
         </KeyboardAvoidingView>
     );
 }
