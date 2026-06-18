@@ -24,7 +24,6 @@ This mobile application provides a robust, interactive dashboard for security ad
 
 | Feature | Description |
 |---|---|
-| **Cross-Platform** | Single codebase compiled natively for both iOS and Android. |
 | **Secure Authentication** | Seamless email and OTP-based 2FA login flow. |
 | **Mobile Audit Center** | Trigger new PQC and TLS configuration scans on your domains right from your phone. |
 | **Data Visualization** | High-performance mobile charts showing risk distribution and PQC readiness. |
@@ -96,7 +95,7 @@ mobile/
 ### Prerequisites
 - Node.js (v18+)
 - Expo CLI
-- Expo Go app on your physical device OR an iOS Simulator / Android Emulator installed on your machine.
+- Expo Go app on your physical device OR an Android Emulator installed on your machine.
 - Running Backend Server (`backend-pnb`)
 
 ### Setup
@@ -125,7 +124,6 @@ npx expo start
 ```
 
 - **Physical Device**: Open the Expo Go app on your phone and scan the QR code generated in your terminal.
-- **iOS Simulator**: Press `i` in the terminal.
 - **Android Emulator**: Press `a` in the terminal.
 - **Web**: Press `w` in the terminal to view in a browser (if configured).
 
