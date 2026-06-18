@@ -71,7 +71,7 @@ This mobile application provides a robust, interactive dashboard for security ad
 ## 📂 Project Structure
 
 ```text
-mobile/
+frontend-app/
 │
 ├── app/                 # Expo Router file-based routing
 │   ├── (auth)/          # Authentication screens (Login, OTP)
@@ -103,7 +103,7 @@ mobile/
 1. **Clone & Navigate**
    ```bash
    git clone <repository-url>
-   cd mobile
+   cd frontend-app
    ```
 
 2. **Install Dependencies**
