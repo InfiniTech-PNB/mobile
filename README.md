@@ -1,50 +1,156 @@
-# Welcome to your Expo app 👋
+# KavachAI Mobile App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+> **Quantum-Safe Infrastructure Dashboard for Mobile**
+> Built for PNB Hackathon 2026 by **InfiniTech**
 
-## Get started
+This mobile application provides a robust, interactive dashboard for security administrators to monitor cryptographic vulnerabilities, track Post-Quantum Cryptography (PQC) readiness, and run infrastructure scans directly from their iOS or Android devices.
 
-1. Install dependencies
+---
 
+## 📌 Table of Contents
+
+- [Features](#-features)
+- [Architecture & Flow](#-architecture--flow)
+- [Tech Stack](#️-tech-stack)
+- [Project Structure](#-project-structure)
+- [Local Setup (First Time)](#-local-setup-first-time)
+- [Running the Application](#-running-the-application)
+- [Application Modules & Screens](#-application-modules--screens)
+- [Team](#-team)
+
+---
+
+## 🚀 Features
+
+| Feature | Description |
+|---|---|
+| **Cross-Platform** | Single codebase compiled natively for both iOS and Android. |
+| **Secure Authentication** | Seamless email and OTP-based 2FA login flow. |
+| **Mobile Audit Center** | Trigger new PQC and TLS configuration scans on your domains right from your phone. |
+| **Data Visualization** | High-performance mobile charts showing risk distribution and PQC readiness. |
+| **CBOM & Inventory** | View Cryptographic Bill of Materials and complete crypto algorithm inventories. |
+| **Reporting Hub** | View executive summaries, schedule automated reports, or request on-demand reports to your email. |
+
+---
+
+## 🔄 Architecture & Flow
+
+### Execution Flow / How it Works
+
+1. **Authenticate**: User logs in with email and OTP verification (2FA) via the Auth module.
+2. **Dashboard**: The main dashboard provides an at-a-glance view of domain readiness, risk scores, and total monitored assets.
+3. **Audit/Scan**: Users can navigate to the Scan tab to initiate soft or deep cryptographic scans.
+4. **Analysis & Results**: Once a scan completes, users can deep-dive into the TLS configurations, cipher suites, and AI-generated PQC remediation strategies.
+5. **Reporting**: The Reporting tab allows administrators to dispatch on-demand executive PDFs or manage recurring scheduled reports.
+
+---
+
+## 🛠️ Tech Stack
+
+### Framework & Routing
+| Technology | Purpose |
+|---|---|
+| **React Native** | Native mobile framework |
+| **Expo** | Development platform and build pipeline |
+| **Expo Router** | File-based navigation and routing (`app/` directory) |
+
+### Styling & UI
+| Technology | Purpose |
+|---|---|
+| **NativeWind (Tailwind CSS)** | Utility-first styling adapted for React Native |
+| **React Native Gifted Charts** | Powerful native chart visualizations |
+| **Lucide React Native** | Iconography |
+
+### Data & API
+| Technology | Purpose |
+|---|---|
+| **Axios** | HTTP requests and API integrations |
+| **Expo Secure Store** | Secure local storage for JWT tokens |
+
+---
+
+## 📂 Project Structure
+
+```text
+mobile/
+│
+├── app/                 # Expo Router file-based routing
+│   ├── (auth)/          # Authentication screens (Login, OTP)
+│   ├── (tabs)/          # Main bottom-tab navigation screens (Dashboard, Scan, Reports, etc.)
+│   ├── _layout.jsx      # Global navigation layout
+│   └── +not-found.jsx   # 404 / Error screen
+│
+├── assets/              # Static images and fonts
+├── components/          # Reusable UI components (Buttons, Cards, Inputs)
+├── context/             # React Context for global state (e.g., AuthContext)
+├── services/            # API call abstractions and Axios configuration
+├── app.json             # Expo project configuration
+├── tailwind.config.js   # NativeWind / Tailwind styling config
+└── package.json         # Node dependencies
+```
+
+---
+
+## ⚙️ Local Setup (First Time)
+
+### Prerequisites
+- Node.js (v18+)
+- Expo CLI
+- Expo Go app on your physical device OR an iOS Simulator / Android Emulator installed on your machine.
+- Running Backend Server (`backend-pnb`)
+
+### Setup
+
+1. **Clone & Navigate**
+   ```bash
+   git clone <repository-url>
+   cd mobile
+   ```
+
+2. **Install Dependencies**
    ```bash
    npm install
    ```
 
-2. Start the app
+3. **Configure API Endpoints**
+   Update your local IP address in the relevant `services/api.js` or `.env` configuration so the mobile device can communicate with your local backend server.
 
-   ```bash
-   npx expo start
-   ```
+---
 
-In the output, you'll find options to open the app in a
+## 🏃 Running the Application
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
+### Start the Expo Development Server
 ```bash
-npm run reset-project
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+- **Physical Device**: Open the Expo Go app on your phone and scan the QR code generated in your terminal.
+- **iOS Simulator**: Press `i` in the terminal.
+- **Android Emulator**: Press `a` in the terminal.
+- **Web**: Press `w` in the terminal to view in a browser (if configured).
 
-## Learn more
+---
 
-To learn more about developing your project with Expo, look at the following resources:
+## 📊 Application Modules & Screens
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### Authentication (`/app/(auth)`)
+- **Login**: Email and password entry.
+- **OTP**: 2FA verification.
 
-## Join the community
+### Main Navigation (`/app/(tabs)`)
+- **Dashboard (`index`)**: High-level overview, metric cards, and charts.
+- **Scan**: Initiate new scans and track ongoing audit processes.
+- **Results & History**: Review past scan logs and deep-dive into specific asset vulnerabilities.
+- **CBOM & Inventory**: Cryptographic Bill of Materials viewer and full cipher inventory breakdown.
+- **Reporting**:
+  - **Executive**: View high-level CISO summary metrics.
+  - **On-Demand**: Trigger immediate email dispatch of PDF reports.
+  - **Scheduled**: Manage node-cron report schedules.
+- **More**: Additional settings, user profile, and logout functionality.
 
-Join our community of developers creating universal apps.
+---
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## 👤 Team
+
+- **Author:** InfiniTech
+- **Event:** PNB Hackathon 2026
